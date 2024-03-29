@@ -1,231 +1,85 @@
-﻿using BenchmarkDotNet.Attributes;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Efficiency_of_algorithms
+public static class Generators
 {
-    public class Generators
+    private static readonly Random random = new Random();
+
+    public static int[] GenerateRandomArray(int size)
     {
-        public static int[] arr { get; set; }
+        return Enumerable.Range(0, size)
+                         .Select(_ => random.Next())
+                         .ToArray();
+    }
 
-        public Generators()
+    public static int[] GenerateSortedArray(int size)
+    {
+        return Enumerable.Range(0, size)
+                         .ToArray();
+    }
+
+    public static int[] GenerateReversedArray(int size)
+    {
+        return Enumerable.Range(0, size)
+                         .Select(x => size - x - 1)
+                         .ToArray();
+    }
+
+    public static int[] GenerateAlmostSortedArray(int size, double percentDisordered)
+    {
+        int[] sortedArray = GenerateSortedArray(size);
+        int numDisordered = (int)(size * percentDisordered / 100);
+
+        for (int i = 0; i < numDisordered; i++)
         {
-            int[] myIntArray = { 5, 2, 8, 1, 6 };
-           // arr = array;
-            arr= myIntArray;
+            int index1 = random.Next(0, size);
+            int index2 = random.Next(0, size);
+            int temp = sortedArray[index1];
+            sortedArray[index1] = sortedArray[index2];
+            sortedArray[index2] = temp;
+        }
+        return sortedArray;
+    }
+
+    public static int[] GenerateFewUniqueArray(int size)
+    {
+        const int numUniqueValues = 10;
+        const int minValue = 1;
+        const int maxValue = 10;
+
+        if (numUniqueValues > maxValue - minValue + 1)
+        {
+            throw new ArgumentException("Number of unique values exceeds the range of values.");
         }
 
+        int[] uniqueValues = Enumerable.Range(minValue, numUniqueValues).ToArray();
+        int[] array = new int[size];
+        int currentIndex = 0;
+        int valuesPerGroup = size / numUniqueValues;
 
-        public void showArray()
+        for (int i = 0; i < numUniqueValues; i++)
         {
-            int n = arr.Length;
-            for (int i = 0; i < n; ++i)
-                Console.Write(arr[i] + " ");
-
-            Console.Write("\n");
-
-        }
-
-        //-------------------------------------------------------------------------------------------------------------------InsertionSort
-
-        [Benchmark]
-        public void insertionSort()
-        {
-            int n = arr.Length;
-            for (int i = 1; i < n; ++i)
+            for (int j = 0; j < valuesPerGroup; j++)
             {
-                int key = arr[i];
-                int j = i - 1;
-
-                // Move elements of arr[0..i-1],
-                // that are greater than key,
-                // to one position ahead of
-                // their current position
-                while (j >= 0 && arr[j] > key)
-                {
-                    arr[j + 1] = arr[j];
-                    j = j - 1;
-                }
-                arr[j + 1] = key;
+                array[currentIndex++] = uniqueValues[i];
             }
         }
 
-        //-------------------------------------------------------------------------------------------------------------------Merge Sort 
-        void merge(int[] arr, int l, int m, int r)
+        // Fill the remaining slots with random values from the range
+        for (int i = currentIndex; i < size; i++)
         {
-            // Find sizes of two
-            // subarrays to be merged
-            int n1 = m - l + 1;
-            int n2 = r - m;
-
-            // Create temp arrays
-            int[] L = new int[n1];
-            int[] R = new int[n2];
-            int i, j;
-
-            // Copy data to temp arrays
-            for (i = 0; i < n1; ++i)
-                L[i] = arr[l + i];
-            for (j = 0; j < n2; ++j)
-                R[j] = arr[m + 1 + j];
-
-            // Merge the temp arrays
-
-            // Initial indexes of first
-            // and second subarrays
-            i = 0;
-            j = 0;
-
-            // Initial index of merged
-            // subarray array
-            int k = l;
-            while (i < n1 && j < n2)
-            {
-                if (L[i] <= R[j])
-                {
-                    arr[k] = L[i];
-                    i++;
-                }
-                else
-                {
-                    arr[k] = R[j];
-                    j++;
-                }
-                k++;
-            }
-
-            // Copy remaining elements
-            // of L[] if any
-            while (i < n1)
-            {
-                arr[k] = L[i];
-                i++;
-                k++;
-            }
-
-            // Copy remaining elements
-            // of R[] if any
-            while (j < n2)
-            {
-                arr[k] = R[j];
-                j++;
-                k++;
-            }
+            array[i] = random.Next(minValue, maxValue + 1);
         }
 
-        // Main function that
-        // sorts arr[l..r] using
-        // merge()
-        void mSort(int[] arr, int l, int r)
+        // Shuffle the array
+        for (int i = 0; i < size; i++)
         {
-            if (l < r)
-            {
-
-                // Find the middle point
-                int m = l + (r - l) / 2;
-
-                // Sort first and second halves
-                mSort(arr, l, m);
-                mSort(arr, m + 1, r);
-
-                // Merge the sorted halves
-                merge(arr, l, m, r);
-            }
+            int temp = array[i];
+            int randomIndex = random.Next(i, size);
+            array[i] = array[randomIndex];
+            array[randomIndex] = temp;
         }
 
-        [Benchmark]
-
-        public void mergeSort()
-        {
-
-
-            mSort(arr, 0, arr.Length - 1);
-
-
-
-        }
-
-
-        //-------------------------------------------------------------------------------------------------------------------QuickSort
-
-        static void swap(int[] arr, int i, int j)
-        {
-            int temp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = temp;
-        }
-
-        // This function takes last element as pivot,
-        // places the pivot element at its correct position
-        // in sorted array, and places all smaller to left
-        // of pivot and all greater elements to right of pivot
-        static int partition(int[] arr, int low, int high)
-        {
-            // Choosing the pivot
-            int pivot = arr[high];
-
-            // Index of smaller element and indicates
-            // the right position of pivot found so far
-            int i = (low - 1);
-
-            for (int j = low; j <= high - 1; j++)
-            {
-
-                // If current element is smaller than the pivot
-                if (arr[j] < pivot)
-                {
-
-                    // Increment index of smaller element
-                    i++;
-                    swap(arr, i, j);
-                }
-            }
-            swap(arr, i + 1, high);
-            return (i + 1);
-        }
-
-        // The main function that implements QuickSort
-        // arr[] --> Array to be sorted,
-        // low --> Starting index,
-        // high --> Ending index
-        static void qSort(int[] arr, int low, int high)
-        {
-            if (low < high)
-            {
-
-                // pi is partitioning index, arr[p]
-                // is now at right place
-                int pi = partition(arr, low, high);
-
-                // Separately sort elements before
-                // and after partition index
-                qSort(arr, low, pi - 1);
-                qSort(arr, pi + 1, high);
-            }
-
-
-        }
-
-
-        [Benchmark]
-        public void quickSort()
-        {
-
-            int N = arr.Length;
-            qSort(arr, 0, N - 1);
-
-
-
-        }
-
-
-
-
-
-
-
+        return array;
     }
 }
